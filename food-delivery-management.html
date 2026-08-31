@@ -1,0 +1,702 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>RAIL — Delivery Ops</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#1B1F23;
+    --ink-soft:#262B31;
+    --panel:#23282D;
+    --panel-line:#33393f;
+    --paper:#F7F4EC;
+    --paper-shadow:#d9d3c0;
+    --paper-line:#E3DDCB;
+    --amber:#E8A33D;
+    --amber-dim:#7a5a26;
+    --basil:#4C8B6C;
+    --basil-dim:#2c5140;
+    --clay:#C4573B;
+    --clay-dim:#6e3225;
+    --slate:#9AA3AC;
+    --ink-text:#20242A;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  body{
+    background:var(--ink);
+    color:var(--paper);
+    font-family:'Inter', sans-serif;
+    min-height:100vh;
+    -webkit-font-smoothing:antialiased;
+  }
+  .mono{font-family:'JetBrains Mono', monospace;}
+  .display{font-family:'Oswald', sans-serif; text-transform:uppercase; letter-spacing:0.04em;}
+
+  /* ===== HEADER ===== */
+  header{
+    background:var(--ink-soft);
+    border-bottom:1px solid var(--panel-line);
+    padding:18px 32px 0 32px;
+    position:sticky; top:0; z-index:50;
+  }
+  .header-top{
+    display:flex; align-items:center; justify-content:space-between; gap:24px;
+    padding-bottom:16px;
+  }
+  .brand{display:flex; align-items:baseline; gap:12px;}
+  .brand .wordmark{
+    font-family:'Oswald', sans-serif; font-weight:700; font-size:26px;
+    color:var(--amber); letter-spacing:0.08em; text-transform:uppercase;
+  }
+  .brand .tagline{
+    font-family:'JetBrains Mono', monospace; font-size:11px; color:var(--slate);
+    text-transform:uppercase; letter-spacing:0.12em;
+  }
+  .header-right{display:flex; align-items:center; gap:18px;}
+  .clock{font-family:'JetBrains Mono', monospace; font-size:13px; color:var(--slate);}
+  .btn{
+    font-family:'Inter', sans-serif; font-weight:600; font-size:13px;
+    border:none; border-radius:3px; padding:10px 18px; cursor:pointer;
+    transition:transform .12s ease, filter .12s ease;
+  }
+  .btn:hover{filter:brightness(1.12);}
+  .btn:active{transform:scale(0.97);}
+  .btn-amber{background:var(--amber); color:#241a05;}
+  .btn-ghost{background:transparent; color:var(--paper); border:1px solid var(--panel-line);}
+  .btn-basil{background:var(--basil); color:#0d1f16;}
+  .btn-small{padding:6px 12px; font-size:12px;}
+
+  nav{display:flex; gap:2px;}
+  nav button{
+    background:none; border:none; color:var(--slate);
+    font-family:'Oswald', sans-serif; font-size:14px; letter-spacing:0.05em;
+    text-transform:uppercase; padding:12px 16px; cursor:pointer;
+    border-bottom:2px solid transparent; transition:color .15s ease, border-color .15s ease;
+  }
+  nav button:hover{color:var(--paper);}
+  nav button.active{color:var(--amber); border-bottom-color:var(--amber);}
+
+  /* stat strip */
+  .stat-strip{
+    display:grid; grid-template-columns:repeat(4,1fr); gap:1px;
+    background:var(--panel-line); border:1px solid var(--panel-line);
+    margin:20px 32px 0 32px; border-radius:4px; overflow:hidden;
+  }
+  .stat{background:var(--ink-soft); padding:14px 18px;}
+  .stat .label{font-family:'JetBrains Mono', monospace; font-size:10px; color:var(--slate); text-transform:uppercase; letter-spacing:0.1em; margin-bottom:6px;}
+  .stat .value{font-family:'Oswald', sans-serif; font-size:26px; font-weight:600; color:var(--paper);}
+  .stat .value.amber{color:var(--amber);}
+  .stat .value.basil{color:var(--basil);}
+
+  main{padding:24px 32px 60px 32px;}
+  .tab-panel{display:none;}
+  .tab-panel.active{display:block;}
+
+  /* ===== BOARD ===== */
+  .board{
+    display:grid;
+    grid-template-columns:repeat(4, minmax(260px,1fr));
+    gap:18px;
+    align-items:start;
+  }
+  .column{min-width:0;}
+  .column-head{
+    display:flex; align-items:center; justify-content:space-between;
+    padding:0 4px 12px 4px; border-bottom:2px solid var(--col-color, var(--amber));
+    margin-bottom:14px;
+  }
+  .column-head h3{font-family:'Oswald', sans-serif; font-size:15px; letter-spacing:0.08em; text-transform:uppercase;}
+  .column-head .count{
+    font-family:'JetBrains Mono', monospace; font-size:12px;
+    background:var(--panel); border:1px solid var(--panel-line);
+    border-radius:10px; padding:2px 9px; color:var(--slate);
+  }
+  .col-new{--col-color:var(--amber);}
+  .col-prep{--col-color:#d98c3d;}
+  .col-out{--col-color:#4a90a4;}
+  .col-done{--col-color:var(--basil);}
+
+  .ticket{
+    background:var(--paper); color:var(--ink-text);
+    border-radius:2px; margin-bottom:16px; position:relative;
+    box-shadow:0 3px 0 var(--paper-shadow), 0 8px 16px rgba(0,0,0,0.35);
+  }
+  .ticket::before{
+    content:""; display:block; height:8px;
+    background-image:radial-gradient(circle at 50% 100%, var(--ink-soft) 3.5px, transparent 3.6px);
+    background-size:16px 16px; background-position:2px 4px; background-repeat:repeat-x;
+  }
+  .ticket-body{padding:4px 16px 16px 16px;}
+  .ticket-row1{display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:8px;}
+  .ticket-no{font-family:'JetBrains Mono', monospace; font-weight:700; font-size:15px;}
+  .rush-tag{
+    background:var(--clay); color:#fff; font-size:10px; font-weight:700;
+    font-family:'Oswald', sans-serif; letter-spacing:0.08em; padding:3px 7px; border-radius:2px;
+    transform:rotate(2deg);
+  }
+  .ticket-customer{font-weight:600; font-size:14px; margin-bottom:2px;}
+  .ticket-address{font-size:12px; color:#6b6357; margin-bottom:10px;}
+  .ticket-items{
+    list-style:none; border-top:1px dashed var(--paper-line); border-bottom:1px dashed var(--paper-line);
+    padding:8px 0; margin-bottom:10px; font-size:13px;
+  }
+  .ticket-items li{display:flex; justify-content:space-between; padding:2px 0;}
+  .ticket-items li .qty{font-family:'JetBrains Mono', monospace; color:#8a8272;}
+  .ticket-foot{display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;}
+  .ticket-total{font-family:'JetBrains Mono', monospace; font-weight:700; font-size:14px;}
+  .ticket-elapsed{font-family:'JetBrains Mono', monospace; font-size:11px; color:#8a8272;}
+  .ticket-rider{font-size:12px; color:#4C7A5E; margin-bottom:10px; font-weight:600;}
+  .ticket-actions{display:flex; gap:8px;}
+  .ticket-actions .btn{flex:1; text-align:center;}
+  .ticket-actions .btn-outline{
+    background:transparent; border:1px solid var(--ink-text); color:var(--ink-text);
+  }
+
+  .empty-col{
+    border:1px dashed var(--panel-line); border-radius:4px; padding:24px 12px;
+    text-align:center; color:var(--slate); font-size:12px; font-family:'JetBrains Mono', monospace;
+  }
+
+  /* ===== MENU TAB ===== */
+  .panel-title{display:flex; justify-content:space-between; align-items:center; margin-bottom:18px;}
+  .panel-title h2{font-family:'Oswald', sans-serif; font-size:20px; letter-spacing:0.05em; text-transform:uppercase;}
+  .add-form{
+    background:var(--panel); border:1px solid var(--panel-line); border-radius:5px;
+    padding:16px; display:flex; gap:10px; flex-wrap:wrap; margin-bottom:22px; align-items:flex-end;
+  }
+  .field{display:flex; flex-direction:column; gap:5px;}
+  .field label{font-size:10px; text-transform:uppercase; letter-spacing:0.08em; color:var(--slate); font-family:'JetBrains Mono', monospace;}
+  .field input, .field select{
+    background:var(--ink-soft); border:1px solid var(--panel-line); color:var(--paper);
+    padding:9px 10px; border-radius:3px; font-family:'Inter',sans-serif; font-size:13px; min-width:120px;
+  }
+  .menu-grid{display:grid; grid-template-columns:repeat(auto-fill, minmax(230px,1fr)); gap:14px;}
+  .menu-card{
+    background:var(--panel); border:1px solid var(--panel-line); border-radius:5px; padding:16px;
+  }
+  .menu-card.unavailable{opacity:0.45;}
+  .menu-card-top{display:flex; justify-content:space-between; margin-bottom:8px;}
+  .menu-card h4{font-size:15px; font-weight:600;}
+  .cat-tag{
+    font-family:'JetBrains Mono', monospace; font-size:10px; text-transform:uppercase;
+    color:var(--amber); border:1px solid var(--amber-dim); border-radius:10px; padding:2px 8px; display:inline-block; margin-bottom:10px;
+  }
+  .menu-price{font-family:'JetBrains Mono', monospace; font-size:18px; font-weight:700; margin-bottom:12px;}
+  .menu-card-actions{display:flex; gap:8px; align-items:center; justify-content:space-between;}
+  .switch{position:relative; width:38px; height:20px; flex-shrink:0;}
+  .switch input{opacity:0; width:0; height:0;}
+  .slider{position:absolute; inset:0; background:#4a4f54; border-radius:20px; cursor:pointer; transition:.2s;}
+  .slider::before{content:""; position:absolute; height:14px; width:14px; left:3px; top:3px; background:white; border-radius:50%; transition:.2s;}
+  input:checked + .slider{background:var(--basil);}
+  input:checked + .slider::before{transform:translateX(18px);}
+  .icon-btn{background:none; border:none; color:var(--slate); cursor:pointer; font-size:13px; text-decoration:underline;}
+  .icon-btn:hover{color:var(--clay);}
+
+  /* ===== RIDERS ===== */
+  .rider-grid{display:grid; grid-template-columns:repeat(auto-fill, minmax(240px,1fr)); gap:14px;}
+  .rider-card{background:var(--panel); border:1px solid var(--panel-line); border-radius:5px; padding:16px;}
+  .rider-top{display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;}
+  .rider-name{font-weight:600; font-size:15px;}
+  .pill{font-size:10px; font-family:'JetBrains Mono', monospace; text-transform:uppercase; padding:3px 9px; border-radius:10px; letter-spacing:0.06em;}
+  .pill-available{background:var(--basil-dim); color:#a9dcc2;}
+  .pill-delivery{background:var(--amber-dim); color:#f5cf94;}
+  .pill-offline{background:#3a3f44; color:var(--slate);}
+  .rider-meta{font-size:12px; color:var(--slate); margin-bottom:6px;}
+  .rider-order{font-size:12px; color:var(--paper); margin-bottom:10px; font-family:'JetBrains Mono', monospace;}
+
+  /* ===== ANALYTICS ===== */
+  .analytics-grid{display:grid; grid-template-columns:1.2fr 1fr; gap:18px;}
+  .card{background:var(--panel); border:1px solid var(--panel-line); border-radius:5px; padding:20px;}
+  .card h3{font-family:'Oswald', sans-serif; font-size:15px; letter-spacing:0.06em; text-transform:uppercase; margin-bottom:16px; color:var(--slate);}
+  .bar-row{margin-bottom:14px;}
+  .bar-row .bar-label{display:flex; justify-content:space-between; font-size:12px; margin-bottom:5px; font-family:'JetBrains Mono', monospace;}
+  .bar-track{background:var(--ink-soft); border-radius:3px; height:10px; overflow:hidden;}
+  .bar-fill{height:100%; border-radius:3px;}
+  .top-item{display:flex; justify-content:space-between; padding:10px 0; border-bottom:1px solid var(--panel-line); font-size:13px;}
+  .top-item:last-child{border-bottom:none;}
+  .top-item .n{font-family:'JetBrains Mono', monospace; color:var(--amber); font-weight:700;}
+
+  @media (max-width: 980px){
+    .board{grid-template-columns:1fr 1fr;}
+    .stat-strip{grid-template-columns:1fr 1fr;}
+    .analytics-grid{grid-template-columns:1fr;}
+  }
+  @media (max-width: 620px){
+    .board{grid-template-columns:1fr;}
+    header{padding:14px 16px 0 16px;}
+    main{padding:18px 16px 40px 16px;}
+    .stat-strip{margin:16px 16px 0 16px;}
+    .header-top{flex-wrap:wrap; gap:12px;}
+  }
+
+  /* Modal */
+  .modal-overlay{
+    display:none; position:fixed; inset:0; background:rgba(0,0,0,0.6); z-index:100;
+    align-items:center; justify-content:center; padding:20px;
+  }
+  .modal-overlay.active{display:flex;}
+  .modal{
+    background:var(--ink-soft); border:1px solid var(--panel-line); border-radius:6px;
+    padding:24px; width:100%; max-width:420px; max-height:90vh; overflow-y:auto;
+  }
+  .modal h3{font-family:'Oswald', sans-serif; text-transform:uppercase; letter-spacing:0.05em; margin-bottom:16px; color:var(--amber);}
+  .modal .field{margin-bottom:12px; width:100%;}
+  .modal .field input, .modal .field select{width:100%;}
+  .modal-actions{display:flex; gap:10px; margin-top:16px;}
+  .modal-actions .btn{flex:1;}
+  .item-line{display:flex; gap:8px; margin-bottom:8px;}
+  .item-line select{flex:2;} .item-line input{flex:1;}
+  .remove-line{background:var(--clay); border:none; color:#fff; border-radius:3px; padding:0 10px; cursor:pointer;}
+  :focus-visible{outline:2px solid var(--amber); outline-offset:2px;}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="header-top">
+    <div class="brand">
+      <span class="wordmark">Rail</span>
+      <span class="tagline">Delivery Ops · Kitchen to Doorstep</span>
+    </div>
+    <div class="header-right">
+      <span class="clock mono" id="clock">--:--:--</span>
+      <button class="btn btn-amber" id="newOrderBtn">+ New Order</button>
+    </div>
+  </div>
+  <nav>
+    <button class="tab-btn active" data-tab="board">Board</button>
+    <button class="tab-btn" data-tab="menu">Menu</button>
+    <button class="tab-btn" data-tab="riders">Riders</button>
+    <button class="tab-btn" data-tab="analytics">Analytics</button>
+  </nav>
+</header>
+
+<div class="stat-strip">
+  <div class="stat"><div class="label">Orders Today</div><div class="value" id="statOrders">0</div></div>
+  <div class="stat"><div class="label">Revenue</div><div class="value amber" id="statRevenue">$0</div></div>
+  <div class="stat"><div class="label">Avg. Prep Time</div><div class="value" id="statPrep">0 min</div></div>
+  <div class="stat"><div class="label">Riders On Duty</div><div class="value basil" id="statRiders">0</div></div>
+</div>
+
+<main>
+
+  <!-- BOARD -->
+  <section class="tab-panel active" id="tab-board">
+    <div class="board" id="board"></div>
+  </section>
+
+  <!-- MENU -->
+  <section class="tab-panel" id="tab-menu">
+    <div class="panel-title"><h2>Menu Management</h2></div>
+    <div class="add-form">
+      <div class="field"><label>Item Name</label><input type="text" id="mItemName" placeholder="e.g. Paneer Wrap"></div>
+      <div class="field"><label>Category</label>
+        <select id="mItemCat">
+          <option>Starters</option><option>Mains</option><option>Breads</option>
+          <option>Desserts</option><option>Beverages</option>
+        </select>
+      </div>
+      <div class="field"><label>Price ($)</label><input type="number" id="mItemPrice" placeholder="0.00" min="0" step="0.01"></div>
+      <button class="btn btn-amber" id="addMenuItemBtn">Add Item</button>
+    </div>
+    <div class="menu-grid" id="menuGrid"></div>
+  </section>
+
+  <!-- RIDERS -->
+  <section class="tab-panel" id="tab-riders">
+    <div class="panel-title"><h2>Delivery Riders</h2></div>
+    <div class="rider-grid" id="riderGrid"></div>
+  </section>
+
+  <!-- ANALYTICS -->
+  <section class="tab-panel" id="tab-analytics">
+    <div class="panel-title"><h2>Analytics</h2></div>
+    <div class="analytics-grid">
+      <div class="card">
+        <h3>Orders by Status</h3>
+        <div id="statusBars"></div>
+      </div>
+      <div class="card">
+        <h3>Top Selling Items</h3>
+        <div id="topItems"></div>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<!-- New Order Modal -->
+<div class="modal-overlay" id="modalOverlay">
+  <div class="modal">
+    <h3>New Order</h3>
+    <div class="field"><label>Customer Name</label><input type="text" id="oCustomer" placeholder="Jordan Lee"></div>
+    <div class="field"><label>Delivery Address</label><input type="text" id="oAddress" placeholder="14 Birchwood Ave"></div>
+    <div class="field"><label>Items</label></div>
+    <div id="orderLines"></div>
+    <button class="btn btn-ghost btn-small" id="addLineBtn" type="button" style="margin-bottom:12px;">+ Add item line</button>
+    <div class="field">
+      <label><input type="checkbox" id="oRush" style="width:auto; margin-right:6px;">Mark as rush order</label>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" id="cancelOrderBtn">Cancel</button>
+      <button class="btn btn-amber" id="submitOrderBtn">Fire Ticket</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+  // ---------- STATE ----------
+  let ticketCounter = 1042;
+  let menuIdCounter = 1;
+
+  const menuItems = [
+    {id: menuIdCounter++, name:'Paneer Tikka', category:'Starters', price:6.50, available:true, sold:14},
+    {id: menuIdCounter++, name:'Chicken Seekh Kebab', category:'Starters', price:7.25, available:true, sold:11},
+    {id: menuIdCounter++, name:'Butter Chicken', category:'Mains', price:12.00, available:true, sold:22},
+    {id: menuIdCounter++, name:'Dal Makhani', category:'Mains', price:9.50, available:true, sold:17},
+    {id: menuIdCounter++, name:'Veg Biryani', category:'Mains', price:10.75, available:true, sold:19},
+    {id: menuIdCounter++, name:'Garlic Naan', category:'Breads', price:2.75, available:true, sold:31},
+    {id: menuIdCounter++, name:'Tandoori Roti', category:'Breads', price:1.95, available:true, sold:9},
+    {id: menuIdCounter++, name:'Gulab Jamun', category:'Desserts', price:4.00, available:true, sold:12},
+    {id: menuIdCounter++, name:'Mango Lassi', category:'Beverages', price:3.50, available:true, sold:20},
+    {id: menuIdCounter++, name:'Masala Chai', category:'Beverages', price:2.25, available:false, sold:6},
+  ];
+
+  const riders = [
+    {id:1, name:'Sam Okafor', status:'available', order:null, deliveries:5},
+    {id:2, name:'Priya Nair', status:'on-delivery', order:null, deliveries:7},
+    {id:3, name:'Diego Ruiz', status:'available', order:null, deliveries:4},
+    {id:4, name:'Lena Brandt', status:'offline', order:null, deliveries:0},
+  ];
+
+  const STATUSES = ['new','preparing','out','done'];
+  const STATUS_LABEL = {new:'New', preparing:'Preparing', out:'Out for Delivery', done:'Delivered'};
+
+  function minutesAgo(m){ return Date.now() - m*60000; }
+
+  const orders = [
+    {id:1001, ticketNo:'0994', customer:'Amara Chen', address:'22 Fern St', items:[{name:'Butter Chicken',qty:1},{name:'Garlic Naan',qty:2}], total:18.00, status:'preparing', placedAt:minutesAgo(9), rush:false, riderId:null},
+    {id:1002, ticketNo:'0995', customer:'Ravi Kumar', address:'8 Oakmont Rd', items:[{name:'Veg Biryani',qty:2},{name:'Mango Lassi',qty:2}], total:28.50, status:'new', placedAt:minutesAgo(2), rush:true, riderId:null},
+    {id:1003, ticketNo:'0996', customer:'Ines Alvarez', address:'103 Willow Ct', items:[{name:'Dal Makhani',qty:1},{name:'Tandoori Roti',qty:3}], total:15.35, status:'out', placedAt:minutesAgo(21), rush:false, riderId:2},
+    {id:1004, ticketNo:'0997', customer:'Tomasz Nowak', address:'5 Harbor View', items:[{name:'Paneer Tikka',qty:1},{name:'Chicken Seekh Kebab',qty:1},{name:'Garlic Naan',qty:1}], total:16.50, status:'done', placedAt:minutesAgo(48), rush:false, riderId:2},
+  ];
+
+  // ---------- CLOCK ----------
+  function tickClock(){
+    document.getElementById('clock').textContent = new Date().toLocaleTimeString();
+  }
+  setInterval(tickClock, 1000); tickClock();
+
+  // ---------- TABS ----------
+  document.querySelectorAll('.tab-btn').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+      document.querySelectorAll('.tab-panel').forEach(p=>p.classList.remove('active'));
+      btn.classList.add('active');
+      document.getElementById('tab-'+btn.dataset.tab).classList.add('active');
+      if(btn.dataset.tab==='analytics') renderAnalytics();
+    });
+  });
+
+  function elapsedLabel(ts){
+    const mins = Math.floor((Date.now()-ts)/60000);
+    if(mins < 1) return 'just now';
+    if(mins === 1) return '1 min ago';
+    return mins+' min ago';
+  }
+
+  // ---------- BOARD ----------
+  function renderBoard(){
+    const board = document.getElementById('board');
+    board.innerHTML = '';
+    const columns = [
+      {key:'new', cls:'col-new'},
+      {key:'preparing', cls:'col-prep'},
+      {key:'out', cls:'col-out'},
+      {key:'done', cls:'col-done'},
+    ];
+    columns.forEach(col=>{
+      const list = orders.filter(o=>o.status===col.key).sort((a,b)=>b.placedAt-a.placedAt);
+      const colEl = document.createElement('div');
+      colEl.className = 'column '+col.cls;
+      colEl.innerHTML = `<div class="column-head"><h3>${STATUS_LABEL[col.key]}</h3><span class="count">${list.length}</span></div>`;
+      if(list.length===0){
+        colEl.innerHTML += `<div class="empty-col">No tickets on the rail</div>`;
+      } else {
+        list.forEach(o=>{
+          colEl.appendChild(buildTicket(o, col.key));
+        });
+      }
+      board.appendChild(colEl);
+    });
+    updateStats();
+  }
+
+  function buildTicket(o, colKey){
+    const el = document.createElement('div');
+    el.className = 'ticket';
+    const itemsHtml = o.items.map(it=>`<li><span>${it.name}</span><span class="qty">x${it.qty}</span></li>`).join('');
+    let riderHtml = '';
+    if(o.riderId){
+      const r = riders.find(r=>r.id===o.riderId);
+      if(r) riderHtml = `<div class="ticket-rider">Rider: ${r.name}</div>`;
+    }
+    let actionHtml = '';
+    if(colKey==='new'){
+      actionHtml = `<button class="btn btn-amber btn-small" data-action="advance" data-id="${o.id}">Start Preparing</button>`;
+    } else if(colKey==='preparing'){
+      actionHtml = `<button class="btn btn-amber btn-small" data-action="advance" data-id="${o.id}">Send Out</button>`;
+    } else if(colKey==='out'){
+      actionHtml = `<button class="btn btn-basil btn-small" data-action="advance" data-id="${o.id}">Mark Delivered</button>`;
+    } else {
+      actionHtml = `<button class="btn btn-outline btn-small" data-action="none" disabled>Completed</button>`;
+    }
+    el.innerHTML = `
+      <div class="ticket-body">
+        <div class="ticket-row1">
+          <span class="ticket-no mono">#${o.ticketNo}</span>
+          ${o.rush ? '<span class="rush-tag">RUSH</span>' : ''}
+        </div>
+        <div class="ticket-customer">${o.customer}</div>
+        <div class="ticket-address">${o.address}</div>
+        <ul class="ticket-items">${itemsHtml}</ul>
+        <div class="ticket-foot">
+          <span class="ticket-total">$${o.total.toFixed(2)}</span>
+          <span class="ticket-elapsed">${elapsedLabel(o.placedAt)}</span>
+        </div>
+        ${riderHtml}
+        <div class="ticket-actions">${actionHtml}</div>
+      </div>
+    `;
+    return el;
+  }
+
+  document.getElementById('board').addEventListener('click', (e)=>{
+    const btn = e.target.closest('[data-action="advance"]');
+    if(!btn) return;
+    const id = Number(btn.dataset.id);
+    const order = orders.find(o=>o.id===id);
+    if(!order) return;
+    const idx = STATUSES.indexOf(order.status);
+    if(idx < STATUSES.length-1){
+      order.status = STATUSES[idx+1];
+      if(order.status==='out' && !order.riderId){
+        const free = riders.find(r=>r.status==='available');
+        if(free){ free.status='on-delivery'; free.order=order.ticketNo; order.riderId=free.id; }
+      }
+      if(order.status==='done' && order.riderId){
+        const r = riders.find(r=>r.id===order.riderId);
+        if(r){ r.status='available'; r.order=null; r.deliveries+=1; }
+      }
+    }
+    renderBoard();
+    renderRiders();
+  });
+
+  // ---------- STATS ----------
+  function updateStats(){
+    document.getElementById('statOrders').textContent = orders.length;
+    const revenue = orders.reduce((s,o)=>s+o.total,0);
+    document.getElementById('statRevenue').textContent = '$'+revenue.toFixed(2);
+    document.getElementById('statPrep').textContent = '11 min';
+    document.getElementById('statRiders').textContent = riders.filter(r=>r.status!=='offline').length;
+  }
+
+  // ---------- MENU ----------
+  function renderMenu(){
+    const grid = document.getElementById('menuGrid');
+    grid.innerHTML = '';
+    menuItems.forEach(item=>{
+      const card = document.createElement('div');
+      card.className = 'menu-card'+(item.available? '' : ' unavailable');
+      card.innerHTML = `
+        <div class="menu-card-top">
+          <h4>${item.name}</h4>
+          <button class="icon-btn" data-action="delete-item" data-id="${item.id}">Remove</button>
+        </div>
+        <span class="cat-tag">${item.category}</span>
+        <div class="menu-price mono">$${item.price.toFixed(2)}</div>
+        <div class="menu-card-actions">
+          <span style="font-size:11px; color:var(--slate);">${item.available? 'Available' : 'Sold out'}</span>
+          <label class="switch">
+            <input type="checkbox" data-action="toggle-item" data-id="${item.id}" ${item.available?'checked':''}>
+            <span class="slider"></span>
+          </label>
+        </div>
+      `;
+      grid.appendChild(card);
+    });
+  }
+
+  document.getElementById('menuGrid').addEventListener('click', (e)=>{
+    const del = e.target.closest('[data-action="delete-item"]');
+    if(del){
+      const id = Number(del.dataset.id);
+      const idx = menuItems.findIndex(m=>m.id===id);
+      if(idx>-1) menuItems.splice(idx,1);
+      renderMenu();
+    }
+  });
+  document.getElementById('menuGrid').addEventListener('change', (e)=>{
+    const tog = e.target.closest('[data-action="toggle-item"]');
+    if(tog){
+      const id = Number(tog.dataset.id);
+      const item = menuItems.find(m=>m.id===id);
+      if(item) item.available = tog.checked;
+      renderMenu();
+    }
+  });
+
+  document.getElementById('addMenuItemBtn').addEventListener('click', ()=>{
+    const nameEl = document.getElementById('mItemName');
+    const catEl = document.getElementById('mItemCat');
+    const priceEl = document.getElementById('mItemPrice');
+    const name = nameEl.value.trim();
+    const price = parseFloat(priceEl.value);
+    if(!name || isNaN(price) || price < 0){
+      nameEl.style.borderColor = name? '' : 'var(--clay)';
+      priceEl.style.borderColor = (isNaN(price)||price<0) ? 'var(--clay)' : '';
+      return;
+    }
+    menuItems.push({id: menuIdCounter++, name, category: catEl.value, price, available:true, sold:0});
+    nameEl.value=''; priceEl.value=''; nameEl.style.borderColor=''; priceEl.style.borderColor='';
+    renderMenu();
+  });
+
+  // ---------- RIDERS ----------
+  function renderRiders(){
+    const grid = document.getElementById('riderGrid');
+    grid.innerHTML = '';
+    const pillClass = {available:'pill-available', 'on-delivery':'pill-delivery', offline:'pill-offline'};
+    const pillLabel = {available:'Available', 'on-delivery':'On Delivery', offline:'Offline'};
+    riders.forEach(r=>{
+      const card = document.createElement('div');
+      card.className = 'rider-card';
+      card.innerHTML = `
+        <div class="rider-top">
+          <span class="rider-name">${r.name}</span>
+          <span class="pill ${pillClass[r.status]}">${pillLabel[r.status]}</span>
+        </div>
+        <div class="rider-meta">Deliveries today: ${r.deliveries}</div>
+        ${r.order ? `<div class="rider-order">Carrying ticket #${r.order}</div>` : ''}
+        <button class="btn btn-ghost btn-small" data-action="cycle-rider" data-id="${r.id}">
+          ${r.status==='offline' ? 'Bring On Duty' : (r.status==='available' ? 'Send Off Duty' : 'Busy — Delivering')}
+        </button>
+      `;
+      grid.appendChild(card);
+    });
+    updateStats();
+  }
+
+  document.getElementById('riderGrid').addEventListener('click', (e)=>{
+    const btn = e.target.closest('[data-action="cycle-rider"]');
+    if(!btn) return;
+    const id = Number(btn.dataset.id);
+    const r = riders.find(r=>r.id===id);
+    if(!r || r.status==='on-delivery') return; // can't toggle while delivering
+    r.status = r.status==='available' ? 'offline' : 'available';
+    renderRiders();
+  });
+
+  // ---------- ANALYTICS ----------
+  function renderAnalytics(){
+    const bars = document.getElementById('statusBars');
+    const colors = {new:'var(--amber)', preparing:'#d98c3d', out:'#4a90a4', done:'var(--basil)'};
+    const max = Math.max(1, ...STATUSES.map(s=>orders.filter(o=>o.status===s).length));
+    bars.innerHTML = STATUSES.map(s=>{
+      const count = orders.filter(o=>o.status===s).length;
+      const pct = (count/max)*100;
+      return `<div class="bar-row">
+        <div class="bar-label"><span>${STATUS_LABEL[s]}</span><span>${count}</span></div>
+        <div class="bar-track"><div class="bar-fill" style="width:${pct}%; background:${colors[s]};"></div></div>
+      </div>`;
+    }).join('');
+
+    const top = document.getElementById('topItems');
+    const sorted = [...menuItems].sort((a,b)=>b.sold-a.sold).slice(0,6);
+    top.innerHTML = sorted.map((item,i)=>`
+      <div class="top-item"><span class="n">${String(i+1).padStart(2,'0')}</span><span style="flex:1; margin-left:10px;">${item.name}</span><span class="mono">${item.sold} sold</span></div>
+    `).join('');
+  }
+
+  // ---------- NEW ORDER MODAL ----------
+  const overlay = document.getElementById('modalOverlay');
+  const linesWrap = document.getElementById('orderLines');
+
+  function addOrderLine(){
+    const line = document.createElement('div');
+    line.className = 'item-line';
+    const options = menuItems.filter(m=>m.available).map(m=>`<option value="${m.id}">${m.name} — $${m.price.toFixed(2)}</option>`).join('');
+    line.innerHTML = `
+      <select class="line-item">${options}</select>
+      <input type="number" class="line-qty" value="1" min="1" style="width:60px;">
+      <button type="button" class="remove-line">×</button>
+    `;
+    line.querySelector('.remove-line').addEventListener('click', ()=> line.remove());
+    linesWrap.appendChild(line);
+  }
+
+  document.getElementById('newOrderBtn').addEventListener('click', ()=>{
+    document.getElementById('oCustomer').value='';
+    document.getElementById('oAddress').value='';
+    document.getElementById('oRush').checked=false;
+    linesWrap.innerHTML='';
+    addOrderLine();
+    overlay.classList.add('active');
+  });
+  document.getElementById('addLineBtn').addEventListener('click', addOrderLine);
+  document.getElementById('cancelOrderBtn').addEventListener('click', ()=> overlay.classList.remove('active'));
+  overlay.addEventListener('click', (e)=>{ if(e.target===overlay) overlay.classList.remove('active'); });
+
+  document.getElementById('submitOrderBtn').addEventListener('click', ()=>{
+    const customer = document.getElementById('oCustomer').value.trim();
+    const address = document.getElementById('oAddress').value.trim();
+    const rush = document.getElementById('oRush').checked;
+    const lineEls = [...linesWrap.querySelectorAll('.item-line')];
+
+    if(!customer || !address || lineEls.length===0){
+      alert('Please fill in customer name, address, and at least one item.');
+      return;
+    }
+
+    let total = 0;
+    const items = lineEls.map(line=>{
+      const itemId = Number(line.querySelector('.line-item').value);
+      const qty = Math.max(1, parseInt(line.querySelector('.line-qty').value) || 1);
+      const menuItem = menuItems.find(m=>m.id===itemId);
+      if(menuItem){
+        total += menuItem.price*qty;
+        menuItem.sold += qty;
+        return {name: menuItem.name, qty};
+      }
+      return null;
+    }).filter(Boolean);
+
+    if(items.length===0){ alert('Menu has no available items to add.'); return; }
+
+    ticketCounter++;
+    orders.push({
+      id: Date.now(),
+      ticketNo: String(ticketCounter),
+      customer, address, items,
+      total, status:'new', placedAt: Date.now(), rush, riderId:null
+    });
+
+    overlay.classList.remove('active');
+    renderBoard();
+  });
+
+  // ---------- INIT ----------
+  renderBoard();
+  renderMenu();
+  renderRiders();
+  renderAnalytics();
+  setInterval(renderBoard, 30000); // refresh elapsed-time labels
+})();
+</script>
+</body>
+</html>
